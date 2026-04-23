@@ -5,47 +5,55 @@ import json
 import platform
 
 st.write("Versión de Python:", platform.python_version())
-
-values = 0.0
-act1 = "OFF"
-
-def on_publish(client, userdata, result):
-    print("el dato ha sido publicado \n")
-
-# ✅ Restaurado: on_message que tenías originalmente
-def on_message(client, userdata, message):
-    time.sleep(2)
-    message_received = str(message.payload.decode("utf-8"))
-    st.write(message_received)
+st.title("MQTT Control")
 
 broker = "157.230.214.127"
 port = 1883
 
-def publish_message(topic, message_dict):
-    client = paho.Client(f"MJ-HUB-{int(time.time())}")  # ✅ ID único
-    client.on_publish = on_publish
-    client.on_message = on_message
-    client.connect(broker, port)
-    client.loop_start()
-    message = json.dumps(message_dict)
-    ret = client.publish(topic, message)
-    ret.wait_for_publish()
-    client.loop_stop()
+# ✅ CAMBIA "NOMBRE_TUYO" por algo único (tu nombre, carné, etc.)
+# Esto evita conflictos si alguien más tiene el mismo código corriendo
+CLIENT_ID = "MARIA_JOSE_CLIENT"
+
+def on_publish(client, userdata, result):
+    print("Dato publicado\n")
+
+def get_client():
+    """Crea y conecta un cliente MQTT fresco."""
+    c = paho.Client(MARIA_JOSE_CLIENT)
+    c.on_publish = on_publish
+    c.connect(broker, port)
+    return c
+
+# --- Botones ON / OFF ---
+col1, col2 = st.columns(2)
+
+with col1:
+    if st.button("ON"):
+        message = json.dumps({"Act1": "ON"})
+        client = get_client()
+        client.publish("mjruab1", message)
+        client.disconnect()
+        st.success("LED encendido ✅")
+
+with col2:
+    if st.button("OFF"):
+        message = json.dumps({"Act1": "OFF"})
+        client = get_client()
+        client.publish("mjruab1", message)
+        client.disconnect()
+        st.success("LED apagado ⭕")
+
+# --- Control del servo ---
+st.divider()
+values = st.slider("Ángulo del servo (0 – 100)", 0.0, 100.0)
+st.write("Valor seleccionado:", values)
+
+if st.button("Enviar valor analógico"):
+    message = json.dumps({"Analog": float(values)})
+    client = get_client()
+    client.publish("mjruab2", message)
     client.disconnect()
+    st.success(f"Valor {values} enviado al servo ✅")
 
-st.title("MQTT Control")
 
-if st.button('ON'):
-    publish_message("MJmqtt_s", {"Act1": "ON"})  # ✅ topic corregido
-    st.success("Enviado: ON")
 
-if st.button('OFF'):
-    publish_message("MJmqtt_s", {"Act1": "OFF"})
-    st.success("Enviado: OFF")
-
-values = st.slider('Selecciona el rango de valores', 0.0, 100.0)
-st.write('Values:', values)
-
-if st.button('Enviar valor analógico'):
-    publish_message("MJmqtt_a", {"Analog": float(values)})
-    st.success(f"Enviado: {values}")
