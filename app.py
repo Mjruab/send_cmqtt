@@ -4,74 +4,40 @@ import streamlit as st
 import json
 import platform
 
-# Muestra la versión de Python junto con detalles adicionales
 st.write("Versión de Python:", platform.python_version())
 
-values = 0.0
-act1="OFF"
+broker = "157.230.214.127"
+port = 1883
 
-def on_publish(client,userdata,result):             #create function for callback
+def on_publish(client, userdata, result):
     print("el dato ha sido publicado \n")
-    pass
 
-def on_message(client, userdata, message):
-    global message_received
-    time.sleep(2)
-    message_received=str(message.payload.decode("utf-8"))
-    st.write(message_received)
-
-        
-
-
-broker="157.230.214.127"
-port=1883
-client1= paho.Client("MJ-HUB")
-client1.on_message = on_message
-
-
+def publish_message(topic, message):
+    client = paho.Client(f"MJ-HUB-{int(time.time())}")
+    client.on_publish = on_publish
+    client.connect(broker, port)
+    client.loop_start()                    # ✅ Inicia el loop de red
+    ret = client.publish(topic, message)
+    ret.wait_for_publish()                 # ✅ Espera a que se publique
+    client.loop_stop()                     # ✅ Detiene el loop limpiamente
+    client.disconnect()                    # ✅ Desconecta correctamente
 
 st.title("MQTT Control")
 
 if st.button('ON'):
-    act1="ON"
-    client1= paho.Client("MJ-HUB")                           
-    client1.on_publish = on_publish                          
-    client1.connect(broker,port)  
-    message =json.dumps({"Act1":act1})
-    ret= client1.publish("MJmqtt_s", message)
- 
-    #client1.subscribe("Sensores")
-    
-    
-else:
-    st.write('')
+    message = json.dumps({"Act1": "ON"})
+    publish_message("MJmqtt_s", message)
+    st.success("Enviado: ON")
 
 if st.button('OFF'):
-    act1="OFF"
-    client1= paho.Client("MJ-HUB")                           
-    client1.on_publish = on_publish                          
-    client1.connect(broker,port)  
-    message =json.dumps({"Act1":act1})
-    ret= client1.publish("MJmqtt_s", message)
-  
-    
-else:
-    st.write('')
+    message = json.dumps({"Act1": "OFF"})
+    publish_message("MJmqtt_s", message)
+    st.success("Enviado: OFF")
 
-values = st.slider('Selecciona el rango de valores',0.0, 100.0)
+values = st.slider('Selecciona el rango de valores', 0.0, 100.0)
 st.write('Values:', values)
 
 if st.button('Enviar valor analógico'):
-    client1= paho.Client("MJ-HUB")                           
-    client1.on_publish = on_publish                          
-    client1.connect(broker,port)   
-    message =json.dumps({"Analog": float(values)})
-    ret= client1.publish("MJmqtt_a", message)
-    
- 
-else:
-    st.write('')
-
-
-
-
+    message = json.dumps({"Analog": float(values)})
+    publish_message("MJmqtt_a", message)
+    st.success(f"Enviado: {values}")
