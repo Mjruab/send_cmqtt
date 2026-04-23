@@ -19,7 +19,7 @@ def on_publish(client, userdata, result):
 
 def get_client():
     """Crea y conecta un cliente MQTT fresco."""
-    c = paho.Client(MARIA_JOSE_CLIENT)
+    c = paho.Client(CLIENT_ID)
     c.on_publish = on_publish
     c.connect(broker, port)
     return c
